@@ -38,5 +38,11 @@
     "yellow": "led_yellow",
     "red": "led_red",
     "green": "led_green"
+  }, 
+  "ENV_FEEDS": {
+    "temperature": "temperature",
+    "humidity": "humidity"
   }
+
 }
+
