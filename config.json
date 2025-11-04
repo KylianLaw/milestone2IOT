@@ -1,0 +1,42 @@
+{
+  "ADAFRUIT_IO_USERNAME": "Kylian123",
+  "ADAFRUIT_IO_KEY": "aio_wPLG03RUVMGd31Ioz68Adv2wk0xS",
+  "MQTT_BROKER": "io.adafruit.com",
+  "MQTT_PORT": 1883,
+  "MQTT_KEEPALIVE": 60,
+
+  "devices": ["living_room_light", "bedroom_fan", "front_door", "garage_door"],
+  "camera_enabled": true,
+  "capturing_interval": 3,
+  "flushing_interval": 10,
+  "sync_interval": 300,
+  "security_check_interval": 5,
+  "security_send_interval": 60,
+  "env_interval": 20,
+
+  "buzzer_mode": "passive",
+  "buzzer_pin": 18,
+  "buzzer_freq": 2000,
+  "buzzer_duty": 70.0,
+  "buzzer_alarm_seconds": 15,
+
+  "BUZZER_CONTROL_FEED": "buzzer_control",
+  "buzzer_control_mode": "toggle",
+
+  "FEED_KEY": "LCD_display",
+  "LCD_ADDR": 39,
+  "LCD_COLS": 16,
+  "LCD_ROWS": 2,
+
+  "LED_PINS": {
+    "yellow": 16,
+    "red": 20,
+    "green": 21
+  },
+
+  "LED_FEEDS": {
+    "yellow": "led_yellow",
+    "red": "led_red",
+    "green": "led_green"
+  }
+}
