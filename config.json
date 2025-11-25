@@ -38,11 +38,11 @@
     "yellow": "led_yellow",
     "red": "led_red",
     "green": "led_green"
-  }, 
+  },
+
   "ENV_FEEDS": {
     "temperature": "temperature",
     "humidity": "humidity"
-  }
-
+  },
+   "NEON_DB_URL": "postgresql://neondb_owner:npg_OW0tzNqTKP7y@ep-proud-pond-a4id0k5g-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
 }
-
