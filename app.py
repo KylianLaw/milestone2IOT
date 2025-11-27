@@ -11,7 +11,7 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
-CONFIG_PATH = Path(__file__).with_name("config_Test.json")
+CONFIG_PATH = Path(__file__).with_name("config.json")
 cfg = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
 
 AIO_USERNAME = cfg["ADAFRUIT_IO_USERNAME"]
