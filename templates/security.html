@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}Security Center{% endblock %}
+
+{% block content %}
+
+<div class="security-page">
+
+    <!-- TOP: TITLE + SMALL SUMMARY TAG -->
+    <header class="security-page__header">
+        <div>
+            <h1 class="security-page__title">Security Center</h1>
+            <p class="security-page__subtitle">
+                Overview of your home intrusion and safety systems.
+            </p>
+        </div>
+        <div class="security-page__badge">
+            <span class="dot dot--ok"></span>
+            System Connected
+        </div>
+    </header>
+
+    <!-- ROW 1: STATUS CARD + QUICK STATS -->
+    <section class="security-page__row security-page__row--top">
+        <!-- Status & Controls -->
+        <article class="sec-card sec-card--status">
+            <h2 class="sec-card__title">System Status</h2>
+
+            <div class="sec-status">
+                <span class="sec-status__label">Current mode</span>
+                <div class="sec-status__pill sec-status__pill--disarmed">
+                    DISARMED
+                </div>
+            </div>
+
+            <div class="sec-actions">
+                <button class="btn-sec btn-sec--primary">Arm System</button>
+                <button class="btn-sec btn-sec--ghost">Disarm</button>
+            </div>
+
+            <p class="sec-status__hint">
+                When armed, motion and smoke alerts will be logged and displayed below.
+            </p>
+        </article>
+
+        <!-- Quick stats -->
+        <article class="sec-card sec-card--metrics">
+            <h2 class="sec-card__title">Today at a glance</h2>
+            <div class="sec-metrics">
+                <div class="sec-metric">
+                    <div class="sec-metric__icon circle circle--motion">🚶</div>
+                    <div class="sec-metric__value">0</div>
+                    <div class="sec-metric__label">Motion events</div>
+                </div>
+                <div class="sec-metric">
+                    <div class="sec-metric__icon circle circle--smoke">🔥</div>
+                    <div class="sec-metric__value">0</div>
+                    <div class="sec-metric__label">Smoke alerts</div>
+                </div>
+                <div class="sec-metric">
+                    <div class="sec-metric__icon circle circle--time">⏱</div>
+                    <div class="sec-metric__value">—</div>
+                    <div class="sec-metric__label">Last intrusion</div>
+                </div>
+            </div>
+        </article>
+    </section>
+
+    <!-- ROW 2: DATE FILTER + LOG SUMMARY -->
+    <section class="security-page__row security-page__row--middle">
+        <article class="sec-card sec-card--filter">
+            <h2 class="sec-card__title">View historical activity</h2>
+            <div class="sec-filter">
+                <label for="history-date" class="field-label">Select date</label>
+                <input type="date" id="history-date" class="date-input">
+            </div>
+            <p class="sec-filter__hint">
+                Choose a date to review motion and smoke events saved in the cloud database.
+            </p>
+        </article>
+
+        <article class="sec-card sec-card--log">
+            <h2 class="sec-card__title">Intrusion log (selected day)</h2>
+            <ul class="sec-log">
+                <li class="sec-log__item sec-log__item--empty">
+                    No events recorded for this day.
+                </li>
+            </ul>
+        </article>
+    </section>
+
+    <!-- ROW 3: MOTION / SMOKE PANELS -->
+    <section class="security-page__row security-page__row--bottom">
+
+        <article class="sec-card sec-card--feed">
+            <div class="sec-feed__header">
+                <div class="sec-feed__label">
+                    <span class="circle circle--small circle--motion"></span>
+                    Motion activity
+                </div>
+                <span class="sec-feed__window">Last 24 hours</span>
+            </div>
+            <div class="sec-feed__body">
+                <div class="sec-feed__placeholder">
+                    Motion graph will appear here
+                </div>
+            </div>
+        </article>
+
+        <article class="sec-card sec-card--feed">
+            <div class="sec-feed__header">
+                <div class="sec-feed__label">
+                    <span class="circle circle--small circle--smoke"></span>
+                    Smoke activity
+                </div>
+                <span class="sec-feed__window">Last 24 hours</span>
+            </div>
+            <div class="sec-feed__body">
+                <div class="sec-feed__placeholder">
+                    Smoke graph will appear here
+                </div>
+            </div>
+        </article>
+
+    </section>
+
+</div>
+
+{% endblock %}
