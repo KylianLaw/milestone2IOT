@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Line Chart - IoT Dashboard{% endblock %}
+{% block content %}
+  <h2>Temperature Over Time</h2>
+
+  <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:14px;">
+    <label>From:
+      <input id="fromInput" type="datetime-local">
+    </label>
+    <label>To:
+      <input id="toInput" type="datetime-local">
+    </label>
+    <label>Limit:
+      <input id="limitInput" type="number" min="1" step="1" value="48" style="width:80px;">
+    </label>
+    <button id="refreshBtn">Refresh</button>
+    <button id="last24Btn">Last 24h</button>
+  </div>
+
+  <div class="chart-container">
+    <canvas id="lineChart"></canvas>
+  </div>
+
+  <script>
+    let lineChart;
+
+    function toDbString(dtLocal) {
+      // Convert "YYYY-MM-DDTHH:MM" -> "YYYY-MM-DD HH:MM"
+      return dtLocal ? dtLocal.replace('T', ' ') : undefined;
+    }
+
+    function buildQuery() {
+      const fromVal = document.getElementById('fromInput').value;
+      const toVal   = document.getElementById('toInput').value;
+      const limit   = document.getElementById('limitInput').value;
+
+      const p = new URLSearchParams();
+      if (fromVal) p.append('from', toDbString(fromVal));
+      if (toVal)   p.append('to',   toDbString(toVal));
+      if (limit)   p.append('limit', limit);
+      return p.toString() ? '?' + p.toString() : '';
+    }
+
+    async function loadData() {
+      const res = await fetch('/api/line-data' + buildQuery());
+      const data = await res.json();
+
+      if (lineChart) lineChart.destroy();
+      const ctx = document.getElementById('lineChart').getContext('2d');
+      lineChart = new Chart(ctx, {
+        type: 'line',
+        data,
+        options: {
+          responsive: true,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { display: true, position: 'top' },
+            title: { display: true, text: 'Temperature (°C)' }
+          },
+          scales: {
+            x: { grid: { display: false }, title: { display: true, text: 'Timestamp' } },
+            y: { title: { display: true, text: '°C' } }
+          }
+        }
+      });
+    }
+
+    document.getElementById('refreshBtn').addEventListener('click', loadData);
+    document.getElementById('last24Btn').addEventListener('click', () => {
+      const now = new Date();
+      const from = new Date(now.getTime() - 24*60*60*1000);
+
+      // Adjust to local for datetime-local inputs
+      const fix = d => new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,16);
+      document.getElementById('fromInput').value = fix(from);
+      document.getElementById('toInput').value   = fix(now);
+      document.getElementById('limitInput').value = '';
+      loadData();
+    });
+
+    // Initial load
+    loadData();
+  </script>
+{% endblock %}

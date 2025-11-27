@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Device Control{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+    <h1>💡 Device Control</h1>
+    <p>Manage the connected devices in your smart home system.</p>
+</div>
+
+<div class="device-grid">
+
+    <!-- BUZZER -->
+    <div class="device-card">
+        <div class="device-card-header">
+            <h2>🔔 Buzzer</h2>
+        </div>
+        <div class="device-card-body">
+            <div class="device-icon">🔔</div>
+            <div class="device-state">State: <span class="state-value">OFF</span></div>
+            <div class="device-buttons">
+                <button class="btn btn-on">ON</button>
+                <button class="btn btn-off">OFF</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- GREEN LED -->
+    <div class="device-card">
+        <div class="device-card-header">
+            <h2>🟢 Green LED</h2>
+        </div>
+        <div class="device-card-body">
+            <div class="device-icon">🟢</div>
+            <div class="device-state">State: <span class="state-value">OFF</span></div>
+            <div class="device-buttons">
+                <button class="btn btn-on">ON</button>
+                <button class="btn btn-off">OFF</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- YELLOW LED -->
+    <div class="device-card">
+        <div class="device-card-header">
+            <h2>🟡 Yellow LED</h2>
+        </div>
+        <div class="device-card-body">
+            <div class="device-icon">🟡</div>
+            <div class="device-state">State: <span class="state-value">OFF</span></div>
+            <div class="device-buttons">
+                <button class="btn btn-on">ON</button>
+                <button class="btn btn-off">OFF</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- RED LED -->
+    <div class="device-card">
+        <div class="device-card-header">
+            <h2>🔴 Red LED</h2>
+        </div>
+        <div class="device-card-body">
+            <div class="device-icon">🔴</div>
+            <div class="device-state">State: <span class="state-value">OFF</span></div>
+            <div class="device-buttons">
+                <button class="btn btn-on">ON</button>
+                <button class="btn btn-off">OFF</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LCD -->
+    <div class="device-card wide">
+        <div class="device-card-header">
+            <h2>🖥️ LCD Display</h2>
+        </div>
+        <div class="device-card-body">
+            <textarea id="lcd-message" rows="3" placeholder="Type a message..."></textarea>
+            <button class="btn btn-send">Send Message</button>
+            <p class="lcd-current">
+                <strong>Current:</strong> <span>No message</span>
+            </p>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
