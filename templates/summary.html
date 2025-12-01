@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}System Overview{% endblock %}
+
+{% block content %}
+<div class="summary-page">
+
+    <header class="summary-header">
+        <div>
+            <h1 class="summary-title">System Overview</h1>
+            <p class="summary-subtitle">
+                Snapshot of your home environment and quick navigation.
+            </p>
+        </div>
+    </header>
+
+    <section class="summary-grid">
+        <article class="summary-card">
+            <div class="summary-card__header">
+                <span class="summary-card__label">Temperature</span>
+                <span class="summary-card__badge">Indoor</span>
+            </div>
+            <div class="summary-card__value-row">
+                <span id="sum-temp-value" class="summary-card__value">—</span>
+                <span class="summary-card__unit">°C</span>
+            </div>
+            <p class="summary-card__footer">
+                Last update
+                <span id="sum-temp-time" class="summary-card__time">—</span>
+            </p>
+        </article>
+
+        <article class="summary-card">
+            <div class="summary-card__header">
+                <span class="summary-card__label">Humidity</span>
+                <span class="summary-card__badge badge--blue">Indoor</span>
+            </div>
+            <div class="summary-card__value-row">
+                <span id="sum-hum-value" class="summary-card__value">—</span>
+                <span class="summary-card__unit">%</span>
+            </div>
+            <p class="summary-card__footer">
+                Last update
+                <span id="sum-hum-time" class="summary-card__time">—</span>
+            </p>
+        </article>
+
+        <article class="summary-card">
+            <div class="summary-card__header">
+                <span class="summary-card__label">Pressure</span>
+                <span class="summary-card__badge badge--purple">Simulated</span>
+            </div>
+            <div class="summary-card__value-row">
+                <span id="sum-press-value" class="summary-card__value">—</span>
+                <span class="summary-card__unit">hPa</span>
+            </div>
+            <p class="summary-card__footer">
+                Source
+                <span class="summary-card__time">Randomized</span>
+            </p>
+        </article>
+    </section>
+
+    <section class="summary-actions">
+        <h2 class="summary-actions__title">Quick Actions</h2>
+        <div class="summary-actions__buttons">
+            <a class="summary-btn summary-btn--primary" href="{{ url_for('environment_page') }}">
+                View Environment
+            </a>
+            <a class="summary-btn summary-btn--warning" href="{{ url_for('security_control') }}">
+                Manage Security
+            </a>
+            <a class="summary-btn summary-btn--ghost" href="{{ url_for('devices_control') }}">
+                Control Devices
+            </a>
+        </div>
+    </section>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    fetch('/api/environment/summary')
+        .then(r => r.json())
+        .then(data => {
+            const tempEl = document.getElementById('sum-temp-value');
+            const humEl  = document.getElementById('sum-hum-value');
+            const pressEl = document.getElementById('sum-press-value');
+            const tempTimeEl = document.getElementById('sum-temp-time');
+            const humTimeEl  = document.getElementById('sum-hum-time');
+
+            const formatTime = (ts) => {
+                if (!ts) return '—';
+                const d = new Date(ts);
+                if (isNaN(d.getTime())) return ts;
+                return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            };
+
+            if (data.temperature != null) {
+                tempEl.textContent = Number(data.temperature).toFixed(1);
+                tempTimeEl.textContent = formatTime(data.timestamp);
+            }
+
+            if (data.humidity != null) {
+                humEl.textContent = Number(data.humidity).toFixed(1);
+                humTimeEl.textContent = formatTime(data.timestamp);
+            }
+
+            if (data.pressure != null) {
+                pressEl.textContent = Number(data.pressure).toFixed(1);
+            }
+        })
+        .catch(err => {
+            console.error('Error loading environment summary:', err);
+        });
+});
+</script>
+{% endblock %}

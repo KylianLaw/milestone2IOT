@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+
+{% block title %}Environment Monitoring{% endblock %}
+
+{% block content %}
+<div class="security-page">
+
+    <!-- PAGE HEADER -->
+    <header class="security-page__header">
+        <div>
+            <h1 class="security-page__title">Environment Monitoring</h1>
+            <p class="security-page__subtitle">
+                Live snapshot of your home environment and historical trends.
+            </p>
+        </div>
+        <div class="security-page__badge">
+            <span class="dot dot--ok"></span>
+            Sensors Connected
+        </div>
+    </header>
+
+    <!-- ROW 1: "Historical data" selector + Latest reading -->
+    <section class="security-page__row security-page__row--top">
+        <article class="sec-card sec-card--status">
+            <h2 class="sec-card__title">Historical data</h2>
+
+            <div class="sec-filter">
+                <label for="history-date" class="field-label">Select date</label>
+                <input id="history-date"
+                       type="date"
+                       class="date-input" />
+                <p class="sec-status__hint">
+                    Pick a date to load historical readings from Neon.
+                    If no data exists for that day, the charts will fall back to recent entries.
+                </p>
+            </div>
+        </article>
+
+        <article class="sec-card">
+            <h2 class="sec-card__title">Latest reading</h2>
+
+            <div class="sec-metrics">
+                <div class="sec-metric">
+                    <div class="circle circle--motion sec-metric__icon">🌡️</div>
+                    <div class="sec-metric__value" id="summary-temp">—</div>
+                    <div class="sec-metric__label">Temperature (°C)</div>
+                </div>
+                <div class="sec-metric">
+                    <div class="circle circle--smoke sec-metric__icon">💧</div>
+                    <div class="sec-metric__value" id="summary-hum">—</div>
+                    <div class="sec-metric__label">Humidity (%)</div>
+                </div>
+                <div class="sec-metric">
+                    <div class="circle circle--time sec-metric__icon">🌬️</div>
+                    <div class="sec-metric__value" id="summary-press">—</div>
+                    <div class="sec-metric__label">Pressure (simulated, hPa)</div>
+                </div>
+            </div>
+
+            <p class="sec-status__hint" id="summary-timestamp">
+                Last update — —
+            </p>
+        </article>
+    </section>
+
+    <!-- ROW 2: THREE CHART CARDS -->
+    <section class="security-page__row security-page__row--bottom">
+
+        <!-- Temperature -->
+        <article class="sec-card">
+            <div class="sec-feed__header">
+                <div class="sec-feed__label">
+                    <span class="circle circle--motion circle--small"></span>
+                    <span>Temperature — °C</span>
+                </div>
+            </div>
+            <div class="sec-feed__placeholder" style="border-style: solid; min-height: 260px;">
+                <canvas id="temp-chart"></canvas>
+            </div>
+        </article>
+
+        <!-- Humidity -->
+        <article class="sec-card">
+            <div class="sec-feed__header">
+                <div class="sec-feed__label">
+                    <span class="circle circle--smoke circle--small"></span>
+                    <span>Humidity — %</span>
+                </div>
+            </div>
+            <div class="sec-feed__placeholder" style="border-style: solid; min-height: 260px;">
+                <canvas id="hum-chart"></canvas>
+            </div>
+        </article>
+
+        <!-- Pressure (fake) -->
+        <article class="sec-card">
+            <div class="sec-feed__header">
+                <div class="sec-feed__label">
+                    <span class="circle circle--time circle--small"></span>
+                    <span>Pressure (simulated) — hPa</span>
+                </div>
+            </div>
+            <div class="sec-feed__placeholder" style="border-style: solid; min-height: 260px;">
+                <canvas id="press-chart"></canvas>
+            </div>
+        </article>
+
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<!-- Chart.js from CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    console.log("Environment page JS loaded");
+
+    const dateInput = document.getElementById("history-date");
+
+    const tempCanvas  = document.getElementById("temp-chart");
+    const humCanvas   = document.getElementById("hum-chart");
+    const pressCanvas = document.getElementById("press-chart");
+
+    if (!tempCanvas || !humCanvas || !pressCanvas) {
+        console.error("One or more canvases not found");
+        return;
+    }
+
+    const tempCtx  = tempCanvas.getContext("2d");
+    const humCtx   = humCanvas.getContext("2d");
+    const pressCtx = pressCanvas.getContext("2d");
+
+    let tempChart, humChart, pressChart;
+
+    // ---------- SUMMARY (latest reading) ----------
+    async function loadSummary() {
+        try {
+            const resp = await fetch("/api/environment/summary");
+            console.log("Summary status:", resp.status);
+            const data = await resp.json();
+            console.log("Summary data:", data);
+
+            document.getElementById("summary-temp").textContent =
+                data.temperature != null ? Number(data.temperature).toFixed(1) : "—";
+            document.getElementById("summary-hum").textContent =
+                data.humidity != null ? Number(data.humidity).toFixed(1) : "—";
+            document.getElementById("summary-press").textContent =
+                data.pressure != null ? Number(data.pressure).toFixed(1) : "—";
+
+            const ts = data.timestamp || "—";
+            document.getElementById("summary-timestamp").textContent =
+                "Last update — " + ts;
+        } catch (err) {
+            console.error("Summary error", err);
+        }
+    }
+
+    // ---------- HISTORY (Neon) ----------
+    async function loadHistory(dateStr) {
+        try {
+            const url = dateStr
+                ? `/api/environment/history?date=${encodeURIComponent(dateStr)}`
+                : "/api/environment/history";
+
+            console.log("History request:", url);
+            const resp = await fetch(url);
+            console.log("History status:", resp.status);
+            const data = await resp.json();
+            console.log("History data:", data);
+
+            const labels = data.labels || [];
+            const temps  = data.temperature || [];
+            const hums   = data.humidity || [];
+            const pres   = data.pressure || [];
+
+            // Temperature chart
+            if (tempChart) tempChart.destroy();
+            tempChart = new Chart(tempCtx, {
+                type: "line",
+                data: {
+                    labels,
+                    datasets: [{
+                        label: "Temperature (°C)",
+                        data: temps,
+                        borderColor: "rgb(0, 180, 216)",
+                        backgroundColor: "rgba(0, 180, 216, 0.12)",
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 2
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            // Humidity chart
+            if (humChart) humChart.destroy();
+            humChart = new Chart(humCtx, {
+                type: "line",
+                data: {
+                    labels,
+                    datasets: [{
+                        label: "Humidity (%)",
+                        data: hums,
+                        borderColor: "rgb(99, 102, 241)",
+                        backgroundColor: "rgba(99, 102, 241, 0.12)",
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 2
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            // Pressure chart (simulated)
+            if (pressChart) pressChart.destroy();
+            pressChart = new Chart(pressCtx, {
+                type: "line",
+                data: {
+                    labels,
+                    datasets: [{
+                        label: "Pressure (simulated, hPa)",
+                        data: pres,
+                        borderColor: "rgb(16, 185, 129)",
+                        backgroundColor: "rgba(16, 185, 129, 0.12)",
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 2
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+        } catch (err) {
+            console.error("History error", err);
+        }
+    }
+
+    // When the date changes, reload history
+    if (dateInput) {
+        dateInput.addEventListener("change", () => {
+            if (dateInput.value) {
+                loadHistory(dateInput.value);
+            }
+        });
+    }
+
+    // Initial load
+    loadSummary();
+    if (dateInput && dateInput.value) {
+        loadHistory(dateInput.value);
+    } else {
+        loadHistory();
+    }
+});
+</script>
+{% endblock %}
