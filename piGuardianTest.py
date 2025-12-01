@@ -18,7 +18,7 @@ except Exception as e:
 from environmental_module import environmental_module
 from security_module import security_module
 from device_control_module import device_control_module
-from local_storage_moduleTest import LocalStorage
+from local_storage_moduleTest import LocalStorageTest
 from neon_clientTest import NeonClient
 
 
@@ -29,7 +29,9 @@ logging.basicConfig(
 log = logging.getLogger("piGuardian")
 
 
-# ---------------- I²C LCD (PCF8574 backpack) ----------------
+# -------------------------------------------------------------------
+#                           I²C LCD
+# -------------------------------------------------------------------
 class I2CLcd:
     LCD_CLEARDISPLAY = 0x01
     LCD_RETURNHOME   = 0x02
@@ -49,65 +51,80 @@ class I2CLcd:
     BACKLIGHT = 0b00001000
 
     def __init__(self, bus, addr, cols, rows, backlight=True):
-        self.bus, self.addr, self.cols, self.rows = bus, addr, cols, rows
+        self.bus = bus
+        self.addr = addr
+        self.cols = cols
+        self.rows = rows
         self.backlight = backlight
+
         time.sleep(0.05)
 
+        # init sequence
         self._write4(0x30); time.sleep(0.0045)
         self._write4(0x30); time.sleep(0.0045)
         self._write4(0x30); time.sleep(0.00015)
         self._write4(0x20)  # 4-bit
 
         self.command(self.LCD_FUNCTIONSET | self.LCD_2LINE | self.LCD_5x8DOTS)
-        self.command(self.LCD_DISPLAYCTRL | self.LCD_DISPLAYON | self.LCD_CURSOROFF | self.LCD_BLINKOFF)
+        self.command(self.LCD_DISPLAYCTRL | self.LCD_DISPLAYON |
+                     self.LCD_CURSOROFF | self.LCD_BLINKOFF)
         self.clear()
         self.command(self.LCD_ENTRYMODESET | self.LCD_ENTRYLEFT)
 
-    def _exp(self, data):
+    def _exp(self, data: int):
         b = data | (self.BACKLIGHT if self.backlight else 0x00)
         self.bus.write_byte(self.addr, b)
 
-    def _pulse(self, data):
-        self._exp(data | self.ENABLE); time.sleep(0.0005)
-        self._exp(data & ~self.ENABLE); time.sleep(0.0001)
+    def _pulse(self, data: int):
+        self._exp(data | self.ENABLE)
+        time.sleep(0.0005)
+        self._exp(data & ~self.ENABLE)
+        time.sleep(0.0001)
 
-    def _write4(self, data):
+    def _write4(self, data: int):
         self._exp(data)
         self._pulse(data)
 
-    def write8(self, val, rs=0):
+    def write8(self, val: int, rs: int = 0):
         self._write4((val & 0xF0) | rs)
         self._write4(((val << 4) & 0xF0) | rs)
 
-    def command(self, cmd): self.write8(cmd, rs=0)
-    def write_char(self, ch): self.write8(ord(ch), rs=1)
+    def command(self, cmd: int):
+        self.write8(cmd, rs=0)
+
+    def write_char(self, ch: str):
+        self.write8(ord(ch), rs=1)
 
     def clear(self):
-        self.command(self.LCD_CLEARDISPLAY); time.sleep(0.002)
+        self.command(self.LCD_CLEARDISPLAY)
+        time.sleep(0.002)
 
     def home(self):
-        self.command(self.LCD_RETURNHOME); time.sleep(0.002)
+        self.command(self.LCD_RETURNHOME)
+        time.sleep(0.002)
 
-    def set_cursor(self, col, row):
+    def set_cursor(self, col: int, row: int):
         row = max(0, min(self.rows - 1, row))
         col = max(0, min(self.cols - 1, col))
         offsets = [0x00, 0x40, 0x14, 0x54]
         self.command(self.LCD_SETDDRAMADDR | (offsets[row] + col))
 
-    def print(self, text):
+    def print(self, text: str):
         for ch in text:
-            if ch == '\n':
+            if ch == "\n":
                 self.set_cursor(0, 1)
             else:
                 self.write_char(ch)
 
     def set_backlight(self, on: bool):
         self.backlight = bool(on)
-        # touch the expander to apply
+        # touching the expander applies the change
         self._exp(0x00)
 
 
-# ---------------- Buzzer Controller ----------------
+# -------------------------------------------------------------------
+#                          Buzzer Controller
+# -------------------------------------------------------------------
 class BuzzerController:
     def __init__(self, pin=18, mode='passive', pwm_freq=2000, duty_percent=70.0):
         self.pin = int(pin)
@@ -132,7 +149,7 @@ class BuzzerController:
         if self._pwm:
             try:
                 self._pwm.stop()
-            except:
+            except Exception:
                 pass
 
     def set_on(self):
@@ -143,7 +160,7 @@ class BuzzerController:
             self._start_pwm()
         else:
             GPIO.output(self.pin, GPIO.HIGH)
-        log.warning("BUZZER: ON (toggle)")
+        log.info("BUZZER: ON")
 
     def set_off(self):
         with self._lock:
@@ -152,9 +169,9 @@ class BuzzerController:
         if self.mode == 'passive':
             self._stop_pwm()
         GPIO.output(self.pin, GPIO.LOW)
-        log.info("BUZZER: OFF (toggle)")
+        log.info("BUZZER: OFF")
 
-    def _alarm_worker(self, duration_s):
+    def _alarm_worker(self, duration_s: int):
         try:
             with self._lock:
                 self._alarm_active = True
@@ -170,13 +187,14 @@ class BuzzerController:
                     if self.mode == 'passive':
                         self._stop_pwm()
                     GPIO.output(self.pin, GPIO.LOW)
-            log.info("BUZZER: momentary alarm finished")
+            log.info("BUZZER: alarm finished")
 
-    def alarm(self, duration_s=15):
+    def alarm(self, duration_s=15) -> bool:
         with self._lock:
             if self._alarm_active:
                 return False
-            t = threading.Thread(target=self._alarm_worker, args=(duration_s,), daemon=True)
+            t = threading.Thread(target=self._alarm_worker, args=(duration_s,),
+                                 daemon=True)
             t.start()
             return True
 
@@ -184,11 +202,13 @@ class BuzzerController:
         try:
             self._stop_pwm()
             GPIO.output(self.pin, GPIO.LOW)
-        except:
+        except Exception:
             pass
 
 
-# ---------------- LED Bank ----------------
+# -------------------------------------------------------------------
+#                            LED Bank
+# -------------------------------------------------------------------
 class LedBank:
     def __init__(self, mapping):
         """
@@ -196,51 +216,82 @@ class LedBank:
         """
         self.mapping = mapping
         GPIO.setmode(GPIO.BCM)
-        for name, pin in mapping.items():
+        for _, pin in mapping.items():
             GPIO.setup(pin, GPIO.OUT)
             GPIO.output(pin, GPIO.LOW)
 
-    def set(self, name, on: bool):
+    def set(self, name: str, on: bool):
         pin = self.mapping.get(name)
         if pin is None:
             return
         GPIO.output(pin, GPIO.HIGH if on else GPIO.LOW)
-        log.info(f"LED {name.upper()}: {'ON' if on else 'OFF'}")
+        log.info("LED %s: %s", name.upper(), "ON" if on else "OFF")
 
     def all(self, on: bool):
-        for name in self.mapping:
+        for name in self.mapping.keys():
             self.set(name, on)
 
 
-# ---------------- Main Application ----------------
+# -------------------------------------------------------------------
+#                      Neon security event helper
+# -------------------------------------------------------------------
+from datetime import datetime, timezone
+import json
+
+def neon_insert_security_event(neon: NeonClient, event_type: str, sec: dict):
+    """
+    Insert a security event into Neon PostgreSQL.
+
+    Table:
+        id SERIAL PRIMARY KEY
+        event_type VARCHAR
+        created_at TIMESTAMPTZ
+        raw_timestamp TIMESTAMPTZ
+        metadata JSONB
+    """
+    try:
+        # UTC time; browser will convert to local automatically
+        raw_ts = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        metadata = json.dumps(sec, ensure_ascii=False)
+
+        neon.cur.execute(
+            """
+            INSERT INTO security_events (event_type, raw_timestamp, metadata)
+            VALUES (%s, %s, %s);
+            """,
+            (event_type, raw_ts, metadata),
+        )
+
+        log.info(f"[NEON] Inserted security event ({event_type})")
+
+    except Exception as e:
+        log.error(f"[NEON] Failed to insert security event: {e}")
+
+
+# -------------------------------------------------------------------
+#                        Main piGuardian Application
+# -------------------------------------------------------------------
 class PiGuardianAll:
     def __init__(self, cfg_path="config.json"):
         self.config = self._load_config(cfg_path)
-
-        # Publisher to Adafruit IO
-        self.mqtt_agent = None
-        if MQTT_communicator:
-            try:
-                self.mqtt_agent = MQTT_communicator(cfg_path)
-            except Exception as e:
-                log.warning("Could not initialize MQTT_communicator: %s", e)
 
         # Modules
         self.env_data = environmental_module(cfg_path)
         self.security = security_module(cfg_path)
         self.dev_ctrl = device_control_module(cfg_path)
 
-        # Local storage handler (daily rotation)
-        self.storage = LocalStorage(
+        # Local JSONL storage (rotation)
+        self.storage = LocalStorageTest(
             base_dir=self.config.get("LOCAL_DATA_DIR", "local_data")
         )
 
-        # Neon DB client
+        # Neon client (environmental + security)
         self.neon = None
         db_url = self.config.get("NEON_DB_URL")
         if db_url:
             try:
                 self.neon = NeonClient(db_url)
+                log.info("Connected to Neon PostgreSQL")
             except Exception as e:
                 log.error("Could not connect to Neon DB: %s", e, exc_info=True)
 
@@ -250,7 +301,15 @@ class PiGuardianAll:
         self.sync_interval      = int(self.config.get("sync_interval", 300))
         self.keepalive          = int(self.config.get("MQTT_KEEPALIVE", 60))
 
-        # MQTT creds for control subscriber
+        # MQTT publisher wrapper (for sending to Adafruit IO)
+        self.mqtt_agent = None
+        if MQTT_communicator:
+            try:
+                self.mqtt_agent = MQTT_communicator(cfg_path)
+            except Exception as e:
+                log.warning("Could not initialize MQTT_communicator: %s", e)
+
+        # MQTT direct subscriber (for device control)
         self.user   = self.config.get("ADAFRUIT_IO_USERNAME")
         self.key    = self.config.get("ADAFRUIT_IO_KEY")
         self.broker = self.config.get("MQTT_BROKER", "io.adafruit.com")
@@ -259,6 +318,7 @@ class PiGuardianAll:
         # Feed mappings
         self.env_feeds = self.config.get("ENV_FEEDS", {})
         self.security_feeds = self.config.get("SECURITY_FEEDS", {})
+        self.led_feeds = self.config.get("LED_FEEDS", {})
 
         # Buzzer
         self.buzzer = BuzzerController(
@@ -269,13 +329,11 @@ class PiGuardianAll:
         )
         self.buzzer_mode = self.config.get("buzzer_control_mode", "toggle")
         self.buzzer_alarm_seconds = int(self.config.get("buzzer_alarm_seconds", 15))
-        self.buzzer_feed = self.config.get("BUZZER_CONTROL_FEED", "buzzer_control")
+        self.buzzer_feed = self.config.get("BUZZER_CONTROL_FEED", "buzzer-control")
 
         # LEDs
-        self.leds = LedBank(self.config.get("LED_PINS", {"yellow": 16, "red": 20, "green": 21}))
-        self.led_feeds = self.config.get(
-            "LED_FEEDS",
-            {"yellow": "led_yellow", "red": "led_red", "green": "led_green"}
+        self.leds = LedBank(
+            self.config.get("LED_PINS", {"yellow": 16, "red": 20, "green": 21})
         )
 
         # LCD
@@ -283,17 +341,13 @@ class PiGuardianAll:
         self.lcd_addr = int(self.config.get("LCD_ADDR", 39))
         self.lcd_cols = int(self.config.get("LCD_COLS", 16))
         self.lcd_rows = int(self.config.get("LCD_ROWS", 2))
-        self.lcd_feed = self.config.get("FEED_KEY", "LCD_display")
+        self.lcd_feed = self.config.get("FEED_KEY", "lcd-display")
         self.lcd = I2CLcd(self.bus, self.lcd_addr, self.lcd_cols, self.lcd_rows, backlight=True)
         self.lcd.print("System Ready")
         time.sleep(1)
         self.lcd.clear()
 
-        # Party mode
-        self._party_on = False
-        self._party_thread = None
-
-        # Control subscriber (for buttons on Adafruit dashboard)
+        # MQTT subscriber
         self.sub = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
         self.sub.username_pw_set(self.user, self.key)
         self.sub.on_connect = self._on_connect
@@ -301,16 +355,22 @@ class PiGuardianAll:
 
         self._stop = threading.Event()
 
-    def _load_config(self, path):
+    # --------------------------- Config defaults ---------------------------
+    def _load_config(self, path: str) -> dict:
         with open(path, "r") as f:
             data = json.load(f)
+
         data.setdefault("LED_PINS", {"yellow": 16, "red": 20, "green": 21})
-        data.setdefault("LED_FEEDS", {"yellow": "led_yellow", "red": "led_red", "green": "led_green"})
-        data.setdefault("FEED_KEY", "LCD_display")
+        data.setdefault("LED_FEEDS", {
+            "yellow": "led-yellow",
+            "red": "led-red",
+            "green": "led-green",
+        })
+        data.setdefault("FEED_KEY", "lcd-display")
         data.setdefault("LCD_ADDR", 39)
         data.setdefault("LCD_COLS", 16)
         data.setdefault("LCD_ROWS", 2)
-        data.setdefault("BUZZER_CONTROL_FEED", "buzzer_control")
+        data.setdefault("BUZZER_CONTROL_FEED", "buzzer-control")
         data.setdefault("buzzer_control_mode", "toggle")
         data.setdefault("buzzer_alarm_seconds", 15)
         data.setdefault("LOCAL_DATA_DIR", "local_data")
@@ -319,29 +379,34 @@ class PiGuardianAll:
             "humidity": "humidity"
         })
         data.setdefault("SECURITY_FEEDS", {
-            "motion": "motion_feed",
-            "smoke": "smoke_feed"
+            "motion": "motion",
+            "smoke": "smoke"
         })
         return data
 
-    # -------- MQTT callbacks --------
+    # --------------------------- MQTT callbacks ---------------------------
     def _on_connect(self, client, userdata, flags, reason_code, properties=None):
         if reason_code != 0:
-            log.error(f"Control MQTT connect failed: {reason_code}")
+            log.error("Control MQTT connect failed: %s", reason_code)
             return
-        log.info("Connected to Adafruit IO (control)")
+        log.info("Connected to Adafruit IO (control subscriber)")
+
+        # Buzzer
         client.subscribe(f"{self.user}/feeds/{self.buzzer_feed}", qos=1)
-        for name, feed in self.led_feeds.items():
+        # LEDs
+        for _, feed in self.led_feeds.items():
             client.subscribe(f"{self.user}/feeds/{feed}", qos=1)
+        # LCD
         client.subscribe(f"{self.user}/feeds/{self.lcd_feed}", qos=1)
-        log.info("Subscribed to control feeds (buzzer/leds/lcd)")
+
+        log.info("Subscribed to buzzer/LED/LCD feeds")
 
     def _on_message(self, client, userdata, msg):
         topic = msg.topic
         payload = msg.payload.decode("utf-8", errors="ignore").strip()
-        log.info(f"[AIO] {topic} -> {payload}")
+        log.info("[AIO] %s -> %s", topic, payload)
 
-        # Buzzer
+        # Buzzer control
         if topic.endswith(self.buzzer_feed):
             on = payload.lower() in ("on", "1", "true", "high")
             if self.buzzer_mode == "momentary":
@@ -351,7 +416,7 @@ class PiGuardianAll:
                 self.buzzer.set_on() if on else self.buzzer.set_off()
             return
 
-        # LEDs
+        # LED control
         for name, feed in self.led_feeds.items():
             if topic.endswith(feed):
                 on = payload.lower() in ("on", "1", "true", "high")
@@ -360,7 +425,7 @@ class PiGuardianAll:
 
         # LCD text
         if topic.endswith(self.lcd_feed):
-            text = payload.replace('\r', '')
+            text = payload.replace("\r", "")
             self.lcd.clear()
             self.lcd.home()
             remaining = text
@@ -373,214 +438,152 @@ class PiGuardianAll:
                 self.lcd.print(remaining[:self.lcd_cols])
             return
 
-    # -------- background loops --------
+    # --------------------------- ENV LOOP ---------------------------
     def _env_loop(self):
         while not self._stop.is_set():
             try:
                 data = self.env_data.get_environmental_data()
 
                 if isinstance(data, dict):
-                    logging.info("Environment: " + ", ".join(f"{k}={v}" for k, v in data.items()))
-                    # Local daily file
+                    log.info(
+                        "Env: " + ", ".join(f"{k}={v}" for k, v in data.items())
+                    )
+
+                    # Local JSONL
                     self.storage.save("environmental", data)
+
                     # Neon
                     if self.neon:
-                        self.neon.insert_environmental(data)
-                    # Adafruit IO (temperature & humidity)
+                        try:
+                            self.neon.insert_environmental(data)
+                        except Exception as e:
+                            log.warning("Neon environmental insert failed: %s", e)
+
+                    # Adafruit
                     if self.mqtt_agent:
                         try:
                             t_feed = self.env_feeds.get("temperature")
                             h_feed = self.env_feeds.get("humidity")
                             if t_feed and "temperature" in data:
-                                self.mqtt_agent.send_to_adafruit_io(t_feed, data["temperature"])
+                                self.mqtt_agent.send_to_adafruit_io(
+                                    t_feed, data["temperature"]
+                                )
                             if h_feed and "humidity" in data:
-                                self.mqtt_agent.send_to_adafruit_io(h_feed, data["humidity"])
+                                self.mqtt_agent.send_to_adafruit_io(
+                                    h_feed, data["humidity"]
+                                )
                         except Exception as e:
-                            logging.warning("Failed to publish environmental to Adafruit: %s", e)
+                            log.warning("Failed to publish env to Adafruit: %s", e)
                 else:
-                    logging.info(f"Environment: {data}")
+                    # Unexpected type, still store raw
                     self.storage.save(
                         "environmental",
                         {"raw": str(data), "timestamp": datetime.now().isoformat()}
                     )
             except Exception as e:
-                logging.exception(f"Env loop error: {e}")
+                log.exception("Env loop error: %s", e)
+
             self._stop.wait(self.env_interval)
 
-    def _security_check_loop(self):
+    # --------------------------- SECURITY LOOP ---------------------------
+    def _security_loop(self):
         while not self._stop.is_set():
             try:
                 sec = self.security.get_security_data()
+
                 if isinstance(sec, dict):
-                    logging.info(
+                    motion = bool(sec.get("motion_detected"))
+                    smoke = bool(sec.get("smoke_detected"))
+                    image_path = sec.get("image_path")
+
+                    log.info(
                         "Security: motion=%s, smoke=%s, image=%s",
-                        sec.get("motion_detected"), sec.get("smoke_detected"), sec.get("image_path")
+                        motion, smoke, image_path
                     )
+
+                    # Local JSONL
                     self.storage.save("security", sec)
-                    # Publish to Adafruit IO
+
+                    # Neon events
+                    if self.neon:
+                        try:
+                            if motion:
+                                neon_insert_security_event(self.neon, "motion", sec)
+                            if smoke:
+                                neon_insert_security_event(self.neon, "smoke", sec)
+                        except Exception as e:
+                            log.warning("Neon security insert failed: %s", e)
+
+                    # Adafruit feeds
                     if self.mqtt_agent:
                         try:
                             motion_feed = self.security_feeds.get("motion")
-                            smoke_feed  = self.security_feeds.get("smoke")
-                            if motion_feed and "motion_detected" in sec:
+                            smoke_feed = self.security_feeds.get("smoke")
+                            if motion_feed:
                                 self.mqtt_agent.send_to_adafruit_io(
-                                    motion_feed, int(bool(sec["motion_detected"]))
+                                    motion_feed, int(motion)
                                 )
-                            if smoke_feed and "smoke_detected" in sec:
+                            if smoke_feed:
                                 self.mqtt_agent.send_to_adafruit_io(
-                                    smoke_feed, int(bool(sec["smoke_detected"]))
+                                    smoke_feed, int(smoke)
                                 )
                         except Exception as e:
-                            logging.warning("Failed to publish security to Adafruit: %s", e)
+                            log.warning("Failed to publish security to Adafruit: %s", e)
                 else:
-                    logging.info(f"Security: {sec}")
                     self.storage.save(
                         "security",
                         {"raw": str(sec), "timestamp": datetime.now().isoformat()}
                     )
             except Exception as e:
-                logging.exception(f"Security check error: {e}")
+                log.exception("Security loop error: %s", e)
+
             self._stop.wait(self.sec_check_interval)
 
-    def _device_sync_loop(self):
+    # --------------------------- DEVICE LOOP ---------------------------
+    def _device_loop(self):
         while not self._stop.is_set():
             try:
                 states = self.dev_ctrl.get_device_status()
                 if isinstance(states, dict):
-                    logging.info("Device status: " + ", ".join(f"{k}={v}" for k, v in states.items()))
+                    log.info("Devices: " + ", ".join(f"{k}={v}" for k, v in states.items()))
                     self.storage.save("devices", states)
+                elif isinstance(states, list):
+                    for entry in states:
+                        if isinstance(entry, dict):
+                            self.storage.save("devices", entry)
+                        else:
+                            self.storage.save(
+                                "devices",
+                                {"raw": str(entry), "timestamp": datetime.now().isoformat()}
+                            )
                 else:
-                    logging.info(f"Device status entries: {states}")
-                    if isinstance(states, list):
-                        for entry in states:
-                            if isinstance(entry, dict):
-                                self.storage.save("devices", entry)
-                            else:
-                                self.storage.save(
-                                    "devices",
-                                    {"raw": str(entry), "timestamp": datetime.now().isoformat()}
-                                )
-                    else:
-                        self.storage.save(
-                            "devices",
-                            {"raw": str(states), "timestamp": datetime.now().isoformat()}
-                        )
+                    self.storage.save(
+                        "devices",
+                        {"raw": str(states), "timestamp": datetime.now().isoformat()}
+                    )
             except Exception as e:
-                logging.exception(f"Device sync error: {e}")
+                log.exception("Device loop error: %s", e)
+
             self._stop.wait(self.sync_interval)
 
-    # -------- party mode (LED show) --------
-    def _party_worker(self):
-        import random
-        names = list(self.leds.mapping.keys())
-        log.info("🎉 PARTY MODE ON")
-        while self._party_on and not self._stop.is_set():
-            pattern = random.choice(["wave", "strobe", "random", "sequence"])
-            if pattern == "wave":
-                seq = names + names[::-1]
-                for n in seq:
-                    if not self._party_on:
-                        break
-                    self.leds.all(False)
-                    self.leds.set(n, True)
-                    time.sleep(0.15)
-            elif pattern == "strobe":
-                for _ in range(6):
-                    if not self._party_on:
-                        break
-                    self.leds.all(True)
-                    time.sleep(0.08)
-                    self.leds.all(False)
-                    time.sleep(0.08)
-            elif pattern == "random":
-                for _ in range(12):
-                    if not self._party_on:
-                        break
-                    led = random.choice(names)
-                    self.leds.set(led, True)
-                    time.sleep(0.08)
-                    self.leds.set(led, False)
-            elif pattern == "sequence":
-                for n in names:
-                    if not self._party_on:
-                        break
-                    self.leds.set(n, True)
-                    time.sleep(0.2)
-                    self.leds.set(n, False)
-        self.leds.all(False)
-        log.info(" PARTY MODE OFF")
-
-    def toggle_party(self):
-        if self._party_on:
-            self._party_on = False
-            if self._party_thread and self._party_thread.is_alive():
-                self._party_thread.join(timeout=1.0)
-        else:
-            self._party_on = True
-            self._party_thread = threading.Thread(target=self._party_worker, daemon=True)
-            self._party_thread.start()
-
-    # -------- local menu --------
-    def _show_menu(self):
-        print("\n--- Device Control Menu (piGuardian) ---")
-        print("s. Show status")
-        print("a. Turn ALL LEDs ON")
-        print("o. Turn ALL LEDs OFF")
-        print("p. Toggle PARTY MODE")
-        print("l. LCD: Clear")
-        print("b. LCD: Toggle backlight")
-        print("q. Quit")
-
-    def _show_status(self):
-        print("\n--- Current Status ---")
-        for name, pin in self.leds.mapping.items():
-            state = "ON" if GPIO.input(pin) else "OFF"
-            print(f"  LED {name}: {state} (GPIO {pin})")
-        print(f"  Buzzer pin {self.buzzer.pin} mode {self.buzzer.mode}")
-        print(f"  LCD @ 0x{self.lcd_addr:02X} ({self.lcd_cols}x{self.lcd_rows})")
-
-    # -------- lifecycle --------
+    # --------------------------- LIFECYCLE ---------------------------
     def start(self):
-        log.info("Starting ALL modules (env + motion/camera + sync + controls) [piGuardian]")
-        # Control subscriber
+        log.info("Starting piGuardian: env + security + devices + MQTT")
+
+        # MQTT subscriber for control
         self.sub.connect(self.broker, self.port, keepalive=self.keepalive)
         threading.Thread(target=self.sub.loop_forever, daemon=True).start()
 
         # Background loops
         threading.Thread(target=self._env_loop, daemon=True).start()
-        threading.Thread(target=self._security_check_loop, daemon=True).start()
-        threading.Thread(target=self._device_sync_loop, daemon=True).start()
+        threading.Thread(target=self._security_loop, daemon=True).start()
+        threading.Thread(target=self._device_loop, daemon=True).start()
 
-        # Local menu loop
         try:
             while not self._stop.is_set():
-                self._show_menu()
-                choice = input("\nEnter command: ").strip().lower()
-                if choice == 'q':
-                    break
-                elif choice == 's':
-                    self._show_status()
-                elif choice == 'a':
-                    self.leds.all(True)
-                    print("✓ All LEDs ON")
-                elif choice == 'o':
-                    self.leds.all(False)
-                    print("✓ All LEDs OFF")
-                elif choice == 'p':
-                    self.toggle_party()
-                elif choice == 'l':
-                    self.lcd.clear()
-                    self.lcd.home()
-                    print("✓ LCD cleared")
-                elif choice == 'b':
-                    new_state = not self.lcd.backlight
-                    self.lcd.set_backlight(new_state)
-                    print(f"✓ LCD backlight {'ON' if new_state else 'OFF'}")
-                else:
-                    print(" Invalid command!")
                 time.sleep(0.2)
         except KeyboardInterrupt:
-            pass
+            log.info("KeyboardInterrupt received, stopping...")
         finally:
             self.stop()
 
@@ -588,28 +591,35 @@ class PiGuardianAll:
         if self._stop.is_set():
             return
         self._stop.set()
+
         try:
             self.sub.disconnect()
-        except:
+        except Exception:
             pass
+
         try:
             self.buzzer.cleanup()
-        except:
+        except Exception:
             pass
-        self._party_on = False
+
         self.leds.all(False)
         try:
             GPIO.cleanup()
-        except:
+        except Exception:
             pass
-        try:
-            if self.neon:
+
+        if self.neon:
+            try:
                 self.neon.close()
-        except:
-            pass
-        log.info("Stopped cleanly (piGuardian).")
+            except Exception:
+                pass
+
+        log.info("piGuardian stopped cleanly.")
 
 
+# -------------------------------------------------------------------
+#                           MAIN ENTRYPOINT
+# -------------------------------------------------------------------
 if __name__ == "__main__":
-    app = PiGuardianAll("config.json")
-    app.start()
+    guardian = PiGuardianAll("config.json")
+    guardian.start()
