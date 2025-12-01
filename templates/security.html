@@ -20,53 +20,7 @@
         </div>
     </header>
 
-    <!-- ROW 1: STATUS CARD + QUICK STATS -->
-    <section class="security-page__row security-page__row--top">
-        <!-- Status & Controls -->
-        <article class="sec-card sec-card--status">
-            <h2 class="sec-card__title">System Status</h2>
-
-            <div class="sec-status">
-                <span class="sec-status__label">Current mode</span>
-                <div class="sec-status__pill sec-status__pill--disarmed">
-                    DISARMED
-                </div>
-            </div>
-
-            <div class="sec-actions">
-                <button class="btn-sec btn-sec--primary">Arm System</button>
-                <button class="btn-sec btn-sec--ghost">Disarm</button>
-            </div>
-
-            <p class="sec-status__hint">
-                When armed, motion and smoke alerts will be logged and displayed below.
-            </p>
-        </article>
-
-        <!-- Quick stats -->
-        <article class="sec-card sec-card--metrics">
-            <h2 class="sec-card__title">Today at a glance</h2>
-            <div class="sec-metrics">
-                <div class="sec-metric">
-                    <div class="sec-metric__icon circle circle--motion">🚶</div>
-                    <div class="sec-metric__value">0</div>
-                    <div class="sec-metric__label">Motion events</div>
-                </div>
-                <div class="sec-metric">
-                    <div class="sec-metric__icon circle circle--smoke">🔥</div>
-                    <div class="sec-metric__value">0</div>
-                    <div class="sec-metric__label">Smoke alerts</div>
-                </div>
-                <div class="sec-metric">
-                    <div class="sec-metric__icon circle circle--time">⏱</div>
-                    <div class="sec-metric__value">—</div>
-                    <div class="sec-metric__label">Last intrusion</div>
-                </div>
-            </div>
-        </article>
-    </section>
-
-    <!-- ROW 2: DATE FILTER + LOG SUMMARY -->
+    <!-- ROW 1: DATE FILTER + LOG SUMMARY -->
     <section class="security-page__row security-page__row--middle">
         <article class="sec-card sec-card--filter">
             <h2 class="sec-card__title">View historical activity</h2>
@@ -81,7 +35,7 @@
 
         <article class="sec-card sec-card--log">
             <h2 class="sec-card__title">Intrusion log (selected day)</h2>
-            <ul class="sec-log">
+            <ul id="sec-log-list" class="sec-log">
                 <li class="sec-log__item sec-log__item--empty">
                     No events recorded for this day.
                 </li>
@@ -89,7 +43,7 @@
         </article>
     </section>
 
-    <!-- ROW 3: MOTION / SMOKE PANELS -->
+    <!-- ROW 2: MOTION / SMOKE PANELS -->
     <section class="security-page__row security-page__row--bottom">
 
         <article class="sec-card sec-card--feed">
@@ -101,9 +55,7 @@
                 <span class="sec-feed__window">Last 24 hours</span>
             </div>
             <div class="sec-feed__body">
-                <div class="sec-feed__placeholder">
-                    Motion graph will appear here
-                </div>
+                <canvas id="motion-chart"></canvas>
             </div>
         </article>
 
@@ -116,14 +68,169 @@
                 <span class="sec-feed__window">Last 24 hours</span>
             </div>
             <div class="sec-feed__body">
-                <div class="sec-feed__placeholder">
-                    Smoke graph will appear here
-                </div>
+                <canvas id="smoke-chart"></canvas>
             </div>
         </article>
 
     </section>
 
 </div>
+
+<!-- ===================== SCRIPTS (INLINE) ===================== -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const dateInput = document.getElementById("history-date");
+    const logList = document.getElementById("sec-log-list");
+
+    const motionCanvas = document.getElementById("motion-chart");
+    const smokeCanvas = document.getElementById("smoke-chart");
+
+    let motionChart = null;
+    let smokeChart = null;
+
+    // ---------- Helpers ----------
+
+    function formatDateISO(d) {
+        return d.toISOString().slice(0, 10); // YYYY-MM-DD
+    }
+
+    // Extract only HH:MM:SS from an ISO timestamp string WITHOUT timezone shift
+    function extractTime(isoString) {
+        if (!isoString) return "--:--";
+
+        const tIndex = isoString.indexOf("T");
+        if (tIndex === -1) return isoString;
+
+        let timePart = isoString.substring(tIndex + 1); // e.g. "11:27:39.610000+00:00"
+
+        // Cut at first '.', '+', '-', or 'Z'
+        const cutChars = [".", "+", "-", "Z"];
+        let end = timePart.length;
+        for (const ch of cutChars) {
+            const i = timePart.indexOf(ch);
+            if (i !== -1 && i < end) end = i;
+        }
+        return timePart.substring(0, end); // "11:27:39"
+    }
+
+    // ---------- Logs ----------
+
+    async function loadLogsForDate(dateStr) {
+        if (!dateStr) return;
+        try {
+            const res = await fetch("/api/security/logs?date=" + encodeURIComponent(dateStr));
+            if (!res.ok) throw new Error("logs HTTP " + res.status);
+            const events = await res.json();
+
+            logList.innerHTML = "";
+
+            if (!events || events.length === 0) {
+                const li = document.createElement("li");
+                li.className = "sec-log__item sec-log__item--empty";
+                li.textContent = "No events recorded for this day.";
+                logList.appendChild(li);
+                return;
+            }
+
+            events.forEach(ev => {
+                const li = document.createElement("li");
+                li.className = "sec-log__item";
+
+                const timeSpan = document.createElement("span");
+                timeSpan.className = "sec-log__time";
+                timeSpan.textContent = ev.timestamp ? extractTime(ev.timestamp) : "--:--";
+
+                const labelSpan = document.createElement("span");
+                labelSpan.className = "sec-log__label";
+                labelSpan.textContent =
+                    ev.label ||
+                    (ev.event_type === "smoke" ? "Smoke detected" : "Motion detected");
+
+                li.appendChild(timeSpan);
+                li.appendChild(document.createTextNode(" "));
+                li.appendChild(labelSpan);
+                logList.appendChild(li);
+            });
+        } catch (err) {
+            console.error("Failed to load logs:", err);
+        }
+    }
+
+    // ---------- Graphs ----------
+
+    async function loadGraphData() {
+        try {
+            const res = await fetch("/api/security/graph-data?hours=24");
+            if (!res.ok) throw new Error("graph HTTP " + res.status);
+            const data = await res.json();
+
+            const labels = data.labels || [];
+            const motionVals = data.motion || [];
+            const smokeVals = data.smoke || [];
+
+            if (motionCanvas) {
+                const ctx = motionCanvas.getContext("2d");
+                if (motionChart) motionChart.destroy();
+                motionChart = new Chart(ctx, {
+                    type: "line",
+                    data: {
+                        labels,
+                        datasets: [{
+                            label: "Motion events",
+                            data: motionVals,
+                            fill: false,
+                            tension: 0.2,
+                        }],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                    },
+                });
+            }
+
+            if (smokeCanvas) {
+                const ctx = smokeCanvas.getContext("2d");
+                if (smokeChart) smokeChart.destroy();
+                smokeChart = new Chart(ctx, {
+                    type: "line",
+                    data: {
+                        labels,
+                        datasets: [{
+                            label: "Smoke events",
+                            data: smokeVals,
+                            fill: false,
+                            tension: 0.2,
+                        }],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                    },
+                });
+            }
+        } catch (err) {
+            console.error("Failed to load graph data:", err);
+        }
+    }
+
+    // ---------- Wiring ----------
+
+    if (dateInput) {
+        const today = new Date();
+        dateInput.value = formatDateISO(today);
+        loadLogsForDate(dateInput.value);
+
+        dateInput.addEventListener("change", () => {
+            loadLogsForDate(dateInput.value);
+        });
+    }
+
+    loadGraphData();
+    // optional auto-refresh for graphs
+    setInterval(loadGraphData, 30000);
+});
+</script>
 
 {% endblock %}
