@@ -12,7 +12,7 @@
 <div class="device-grid">
 
     <!-- BUZZER -->
-    <div class="device-card">
+    <div class="device-card" data-device="buzzer">  <!-- NEW -->
         <div class="device-card-header">
             <h2>🔔 Buzzer</h2>
         </div>
@@ -27,7 +27,7 @@
     </div>
 
     <!-- GREEN LED -->
-    <div class="device-card">
+    <div class="device-card" data-device="led_green">  <!-- NEW -->
         <div class="device-card-header">
             <h2>🟢 Green LED</h2>
         </div>
@@ -42,7 +42,7 @@
     </div>
 
     <!-- YELLOW LED -->
-    <div class="device-card">
+    <div class="device-card" data-device="led_yellow">  <!-- NEW -->
         <div class="device-card-header">
             <h2>🟡 Yellow LED</h2>
         </div>
@@ -57,7 +57,7 @@
     </div>
 
     <!-- RED LED -->
-    <div class="device-card">
+    <div class="device-card" data-device="led_red">  <!-- NEW -->
         <div class="device-card-header">
             <h2>🔴 Red LED</h2>
         </div>
@@ -72,7 +72,7 @@
     </div>
 
     <!-- LCD -->
-    <div class="device-card wide">
+    <div class="device-card wide" data-device="lcd">  <!-- NEW -->
         <div class="device-card-header">
             <h2>🖥️ LCD Display</h2>
         </div>
@@ -80,11 +80,75 @@
             <textarea id="lcd-message" rows="3" placeholder="Type a message..."></textarea>
             <button class="btn btn-send">Send Message</button>
             <p class="lcd-current">
-                <strong>Current:</strong> <span>No message</span>
+                <strong>Current:</strong> <span id="lcd-current-text">No message</span>
             </p>
         </div>
     </div>
 
 </div>
+
+<!-- Simple inline JS (or move to a separate JS file) -->
+<script>
+  // Handle ON/OFF buttons for buzzer + LEDs
+  document.querySelectorAll('.device-card').forEach(card => {
+    const device = card.dataset.device;
+    const stateSpan = card.querySelector('.state-value');
+    const onBtn  = card.querySelector('.btn-on');
+    const offBtn = card.querySelector('.btn-off');
+
+    if (onBtn && offBtn) {
+      onBtn.addEventListener('click', () => sendDeviceCommand(device, 'on', stateSpan));
+      offBtn.addEventListener('click', () => sendDeviceCommand(device, 'off', stateSpan));
+    }
+  });
+
+  async function sendDeviceCommand(device, state, stateSpan) {
+    try {
+      const resp = await fetch('/api/device-control', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ device, state })
+      });
+      const data = await resp.json();
+      if (!data.ok) {
+        alert('Error: ' + (data.error || 'Unknown error'));
+        return;
+      }
+      if (stateSpan) stateSpan.textContent = state.toUpperCase();
+    } catch (err) {
+      console.error(err);
+      alert('Network error while sending command.');
+    }
+  }
+
+  // Handle LCD send
+  document.querySelector('.btn-send').addEventListener('click', async () => {
+    const msgInput = document.getElementById('lcd-message');
+    const currentSpan = document.getElementById('lcd-current-text');
+    const text = msgInput.value.trim();
+    if (!text) {
+      alert('Please type a message first.');
+      return;
+    }
+
+    try {
+      const resp = await fetch('/api/lcd-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text })
+      });
+      const data = await resp.json();
+      if (!data.ok) {
+        alert('Error: ' + (data.error || 'Unknown error'));
+        return;
+      }
+      currentSpan.textContent = text;
+      msgInput.value = '';
+    } catch (err) {
+      console.error(err);
+      alert('Network error while sending LCD message.');
+    }
+  });
+</script>
 
 {% endblock %}
