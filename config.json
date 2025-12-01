@@ -1,6 +1,6 @@
 {
   "ADAFRUIT_IO_USERNAME": "Kylian123",
-  "ADAFRUIT_IO_KEY": "aio_fXyr58oLPKAxgvhkMq06HzG2Kcg3",
+  "ADAFRUIT_IO_KEY": "aio_RDIy03qFS7kEaXBEWLujPPGWpKvS",
   "MQTT_BROKER": "io.adafruit.com",
   "MQTT_PORT": 1883,
   "MQTT_KEEPALIVE": 60,
