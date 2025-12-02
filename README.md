@@ -116,6 +116,8 @@ Stores:
 - Chart.js graphs  
 📌 <img width="1705" height="854" alt="image" src="https://github.com/user-attachments/assets/4ff1f736-f2c2-4593-bc16-f8a68104c180" />
 
+VERSION 2 with timestamp updated 
+<img width="1480" height="675" alt="image" src="https://github.com/user-attachments/assets/01ff4152-40f6-4b33-b2ba-99ec4048cde3" />
 
 ---
 
@@ -133,6 +135,10 @@ Stores:
 - Motion graph (24h)  
 📌 <img width="1560" height="898" alt="image" src="https://github.com/user-attachments/assets/5ddfb440-aa71-40f7-aabf-2c5aab153877" />
     <img width="1547" height="489" alt="image" src="https://github.com/user-attachments/assets/04b1d951-301e-4bf8-9545-647cba4860f7" />
+
+VERSION 2 with timestamp updated 
+<img width="1506" height="668" alt="image" src="https://github.com/user-attachments/assets/91f5de15-d2bd-4675-8f1a-12ae5e03498b" />
+
 
 
 
