@@ -16,6 +16,7 @@ The system communicates using:
 - **REST → Neon PostgreSQL** (historical storage + queries for charts)  
 - **Flask + Chart.js** (web dashboard with analytics)
 
+- **Render.com link** https://piguardiandashboardrender.onrender.com/
 ---
 
 # 🏗️ System Architecture (Required in Milestone 3)
