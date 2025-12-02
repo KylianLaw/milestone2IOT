@@ -245,6 +245,16 @@ YYYYMMDD_device_status.txt        |
 - Advanced UI with animations
 
 
+📝 Reflection
+
+This project presented several challenges that required persistence and problem-solving.
+At the beginning, we were two weeks behind on Milestone 2 because our Raspberry Pi had not yet arrived, which created significant pressure on our schedule.
+Despite the delay, we managed to catch up by organizing our work efficiently and splitting tasks strategically between team members.
+Another major obstacle was dealing with Adafruit IO keys, which caused frequent issues with authentication and API access.
+At times, the keys would stop working unexpectedly, leaving us unable to push data or control devices until we regenerated credentials.
+We also ran into GitHub’s push-protection system, which blocked our commits because the configuration file accidentally contained sensitive keys.
+This forced us to redo commits, rewrite history, and re-structure our environment handling to protect the project.
+In the end, these difficulties helped us better understand secure development practices and made our system more robust and professional.
 
 
 
