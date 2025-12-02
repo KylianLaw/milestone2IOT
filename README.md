@@ -1,77 +1,165 @@
-# PiGuardian  
-Smart Home IoT Security System — Raspberry Pi Project  
-**Authors:** Ilian Adeleke & Cedric Augustin  
+# 🛡️ PiGuardian — IoT Home Automation & Security System  
+### Raspberry Pi • Flask • Chart.js • Adafruit IO • Neon DB  
+**Team Members:**  
+- Ilian Adeleke     2330261 
+- Cedric Augustin   2233427
 
 ---
 
-## Team Members
-| Name | 
-|------|
-| Ilian Adeleke |
-| Cedric Augustin | 
+# 📌 Project Overview  
+PiGuardian is a smart IoT security and automation system built on Raspberry Pi OS.  
+It collects **environmental data**, detects **motion intrusions**, controls **three IoT devices**,  
+and displays everything through a cloud-deployed **Flask dashboard (Render.com)**.
+
+The system communicates using:
+- **MQTT → Adafruit IO** (live sensor publishing + device control)  
+- **REST → Neon PostgreSQL** (historical storage + queries for charts)  
+- **Flask + Chart.js** (web dashboard with analytics)
 
 ---
 
-## System Overview
-PiGuardian is an IoT-based home security and environment monitoring system built on Raspberry Pi OS.  
-It collects real-time environmental and security data (temperature, humidity, motion, images) and controls devices (lights, fan, buzzer, LCD) via Adafruit IO MQTT.
+# 🏗️ System Architecture (Required in Milestone 3)
+📌 <img width="307" height="764" alt="image" src="https://github.com/user-attachments/assets/105bf9b1-1a4f-418f-ad29-f9defb873b68" />
 
-### Functional Modules
-- `environmental_module.py` — reads DHT11 sensor data (temperature, humidity)
-- `security_module.py` — detects motion using PIR sensor and captures an image
-- `device_control_module.py` — monitors status of connected devices (lights, fan, doors)
-- `MQTT_communicator.py` — handles secure MQTT connection and publishing to Adafruit IO
-- `milestoneLastTry.py` — main orchestrator combining all modules, with local LCD and buzzer feedback
-- `cam.py` / `buzzer.py` — standalone hardware testing utilities
-
----
-
-
-
-## System Block Diagram
-
-<img width="1024" height="1536" alt="image" src="https://github.com/user-attachments/assets/e25ef9ea-754e-454a-972c-3213c476a603" />
-
-![20251104_174111](https://github.com/user-attachments/assets/571eaf85-38bc-422a-8aee-2add86f720aa)
-![20251104_174107](https://github.com/user-attachments/assets/719a01c5-e275-43e1-b84e-e09975b1179c)
-![20251104_174047](https://github.com/user-attachments/assets/dd2fcba5-ea82-49e8-bce6-0f05a6c299fc)
 
 
 ---
 
-## Bill of Materials (BOM)
+# 🧰 Hardware Used (Bill of Materials)
+| Component | Purpose |
+|----------|---------|
+| Raspberry Pi 4B | Main controller |
+| DHT11 Sensor | Temperature + humidity |
+| PIR Motion Sensor | Detects motion |
+| I2C LCD 16×2 | Displays local system messages |
+| LEDs (Red/Yellow/Green) | Device feedback |
+| Buzzer (PWM) | Audible alerts |
+| Breadboard + Wires | Circuit foundation |
+| Pi Camera (optional) | Intrusion snapshots |
 
-- Raspberry Pi 4 Model B (4GB RAM) — main controller board  
-- DHT11 sensor — digital temperature and humidity measurement  
-- PIR motion sensor (HC-SR501) — detects movement  
-- I²C LCD display (16×2 with PCF8574 backpack) — displays system messages  
-- Passive buzzer (KY-006 or equivalent) — audible alerts  
-- LEDs (red, yellow, green) — indicate system and device states  
-- 220 Ω resistors (×3) — protect LEDs from overcurrent  
-- Jumper wires (male-to-male and male-to-female, ~15 total) — for all GPIO connections  
-- Female connector wires — used with modules and sensors that have female headers  
-- Breadboard — prototyping base for the circuit  
-- Optional camera module (Raspberry Pi Camera v2) — captures images when motion is detected  
+📌 **INSERT REAL-WORLD WIRING PHOTO HERE**  
+<img width="955" height="654" alt="image" src="https://github.com/user-attachments/assets/aa2d19e7-cff0-4ca0-bc92-ab89448bd834" />
+<img width="951" height="638" alt="image" src="https://github.com/user-attachments/assets/58d71b9c-94fa-4bd9-a356-7f735e20c937" />
+<img width="951" height="602" alt="image" src="https://github.com/user-attachments/assets/77003e76-9e10-4a8d-9ae2-5ef9ee7cc30c" />
+
 
 ---
 
-## Wiring Diagram / Schematics
-
+# 🔌 Wiring Diagram  
 | Component | GPIO Pin | Notes |
-|------------|-----------|-------|
-| DHT11 | GPIO 19 | Data pin |
-| PIR Sensor | GPIO 6 | Motion input |
-| Buzzer | GPIO 18 | PWM-capable |
+|----------|----------|-------|
+| DHT11 | GPIO 19 | Data |
+| PIR Sensor | GPIO 6 | Motion |
+| LCD SDA | GPIO 2 | I²C |
+| LCD SCL | GPIO 3 | I²C |
+| Buzzer | GPIO 18 | PWM |
 | LED Red | GPIO 20 | Output |
 | LED Yellow | GPIO 16 | Output |
 | LED Green | GPIO 21 | Output |
-| LCD SDA | GPIO 2 (SDA) | I²C |
-| LCD SCL | GPIO 3 (SCL) | I²C |
-| 5V & GND | — | Common power rail |
 
-(Include a breadboard photo or circuit image in your repository’s `/media` folder.)
+
 
 ---
+
+# 🧪 Raspberry Pi Software Modules  
+| File | Description |
+|------|-------------|
+| `environmental_module.py` | Reads DHT11, sends to Adafruit + Neon |
+| `security_module.py` | PIR detection, intrusion logging |
+| `device_control_module.py` | Sends device commands to Adafruit IO |
+| `milestoneLastTry.py` | Main controller orchestrator |
+| `MQTT_communicator.py` | Handles MQTT connection & publishing |
+| `lcd.py`, `buzzer.py` | Local feedback via LCD + buzzer |
+
+---
+
+# ☁️ Cloud Components
+
+## 🌩️ Adafruit IO Dashboard (Live Data + Device Control)
+📌 <img width="1843" height="675" alt="image" src="https://github.com/user-attachments/assets/f150ad85-aaef-4dab-9a28-3582b0f0d0c5" />
+
+
+---
+
+## 🗄️ Neon PostgreSQL Database (Historical Storage)
+Stores:
+- environmental_readings  
+- security_events  
+
+📌 **INSERT TABLE STRUCTURE SCREENSHOT HERE**  
+<img width="318" height="219" alt="image" src="https://github.com/user-attachments/assets/e688fb7a-f00f-4393-aba0-8e715506863f" />
+
+
+📌 **INSERT LIVE DATA INSERT SCREENSHOT HERE**  
+<img width="1583" height="808" alt="image" src="https://github.com/user-attachments/assets/c8b07f53-2525-4424-a82f-cd566a02c610" />
+<img width="1549" height="806" alt="image" src="https://github.com/user-attachments/assets/34bb99be-e844-469a-b131-6c2a4378bac4" />
+
+
+
+---
+
+# 🌐 Flask Web Application (Deployed on Render)
+
+### ✔️ Home Page  
+- Animated banner  
+- Live system summary  
+📌 <img width="1859" height="899" alt="image" src="https://github.com/user-attachments/assets/c990dba7-8f19-40cd-ab8c-e67b921fc874" />
+
+
+---
+
+### ✔️ Environment Page  
+- Date selector  
+- Historical data loaded from Neon  
+- Chart.js graphs  
+📌 <img width="1705" height="854" alt="image" src="https://github.com/user-attachments/assets/4ff1f736-f2c2-4593-bc16-f8a68104c180" />
+
+
+---
+
+### ✔️ Device Control Page  
+- Buttons controlling 3 devices  
+- Direct API calls to Adafruit IO  
+📌 <img width="1794" height="921" alt="image" src="https://github.com/user-attachments/assets/d4630d51-e421-4646-ab8a-91fdc0e8a2b1" />
+
+
+---
+
+### ✔️ Security Page  
+- Arm/disarm system  
+- Logs per selected date  
+- Motion graph (24h)  
+📌 <img width="1560" height="898" alt="image" src="https://github.com/user-attachments/assets/5ddfb440-aa71-40f7-aabf-2c5aab153877" />
+    <img width="1547" height="489" alt="image" src="https://github.com/user-attachments/assets/04b1d951-301e-4bf8-9545-647cba4860f7" />
+
+
+
+---
+
+### ✔️ About Page  
+- Team information  
+- Project description  
+📌 <img width="1401" height="914" alt="image" src="https://github.com/user-attachments/assets/f70eb4c0-0406-454e-9a3a-98438eae069f" />
+    <img width="1653" height="726" alt="image" src="https://github.com/user-attachments/assets/cfc5eb1f-1a8b-4cba-82a8-b9001f201fc1" />
+
+
+
+---
+
+# 🗄️ Local & Cloud Data Storage
+- Automatically writes to local SQLite if offline  
+- Sends data to Neon PostgreSQL when online  
+
+*(We didnt implement offline sync )*
+
+---
+
+# ▶️ Running the System
+
+## 🎛️ Running on Raspberry Pi:
+```bash
+sudo apt update && sudo apt upgrade -y
+python3 milestoneLastTry.py
 
 ## Setup Instructions
 
@@ -122,41 +210,43 @@ Run the main controller program:
 
 Each day the system creates new files:
 ```bash
-
-YYYYMMDD_environmental_data.txt
-
-YYYYMMDD_security_data.txt
-
-YYYYMMDD_device_status.txt
-
+  pip install -r requirements.txt
+  flask run
 ```
 
+📊 Data Formats
 
-Files are flushed every 10 seconds and rotated daily.
+Environmental Readings:
+Field        | Type     | Example
+-------------|----------|-------------------------
+timestamp    | ISO8601  | "2025-11-27T16:22:15"
+temperature  | float    | 24.6
+humidity     | float    | 45.1
+
+Security Events: 
+Field         | Description
+--------------|-----------------------------------------
+event_type    | "motion" or "smoke"
+raw_timestamp | ISO timestamp
+image_path    | optional camera capture
+
+🗂️ Daily Log Files (Auto Rotated) | 
+----------------------------------|
+YYYYMMDD_environmental_data.txt   | 
+YYYYMMDD_security_data.txt        |
+YYYYMMDD_device_status.txt        | 
 
 
-Known Limitations
-
-    -No smoke or CO₂ sensor implemented yet
-
-    -Camera capture fails gracefully if rpicam-still isn’t installed
-
-    -DHT11 accuracy limited (±2°C, ±5% RH)
-
-    -LCD limited to 16×2 display size (no scrolling)
-
-    -Requires stable internet for MQTT communication
+🌟 Future Work
+- Add more sensors (CO₂, VOC, MQ-135)
+- Real-time SMS or email alerts
+- Face recognition
+- Voice assistant control
+- Advanced UI with animations
 
 
 
-  Future Work
 
-      -Add CO₂ / VOC sensors for air quality tracking
 
-      -Integrate face recognition using OpenCV
 
-      -Develop local Flask web dashboard
 
-      -Add email/SMS push notifications for alerts
-
-      -Integrate voice control (Google Assistant / Alexa)
